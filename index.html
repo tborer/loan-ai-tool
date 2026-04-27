@@ -1,117 +1,507 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Loan AI Tool</title>
-  <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loancrate Telemetry: Origination Pipeline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        background: '#0a0a0f',
+                        surface: '#12121a',
+                        surfaceLight: '#1e1e2d',
+                        primary: '#3b82f6',
+                        primaryGlow: 'rgba(59, 130, 246, 0.5)',
+                        warning: '#ef4444',
+                        warningGlow: 'rgba(239, 68, 68, 0.5)',
+                        success: '#10b981',
+                        border: '#27273a',
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(239, 68, 68, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f5f7fa;
-      color: #1a1a2e;
-      min-height: 100vh;
-    }
+        .glass-panel {
+            background: rgba(18, 18, 26, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+        }
 
-    header {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 16px 32px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 30, 45, 0.7), rgba(18, 18, 26, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+        }
 
-    .tab-bar {
-      display: flex;
-      background: #ffffff;
-      border-bottom: 2px solid #e0e4ef;
-      padding: 0 32px;
-    }
+        .alert-banner {
+            background: linear-gradient(90deg, rgba(220, 38, 38, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .alert-banner::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+') repeat;
+            opacity: 0.5;
+            pointer-events: none;
+        }
 
-    .tab-btn {
-      padding: 16px 24px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: #6b7280;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s;
-      white-space: nowrap;
-    }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+            transform: translateY(-1px);
+        }
 
-    .tab-btn:hover {
-      color: #1a1a2e;
-    }
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            transition: all 0.2s ease;
+        }
 
-    .tab-btn.active {
-      color: #2563eb;
-      border-bottom-color: #2563eb;
-      font-weight: 600;
-    }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
 
-    .tab-panel {
-      display: none;
-      padding: 48px 32px;
-    }
+        .metric-value {
+            background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    .tab-panel.active {
-      display: block;
-    }
+        .status-badge {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
 
-    .tab-panel h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #1a1a2e;
-    }
+        .table-row {
+            transition: background-color 0.2s;
+        }
+        
+        .table-row:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
 
-    .tab-panel p {
-      color: #6b7280;
-      font-size: 0.95rem;
-    }
-  </style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
 
-  <header>Loan AI Tool</header>
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- HEADER -->
+        <header class="glass-panel p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Loancrate Telemetry: Origination Pipeline
+                </h1>
+                <p class="text-sm text-gray-400 mt-1">Real-time pipeline velocity and AI performance metrics.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <select class="bg-surface border border-border text-sm text-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none appearance-none">
+                    <option>Date Range: Last 30 Days</option>
+                    <option>Last 7 Days</option>
+                    <option>Year to Date</option>
+                </select>
+                <select class="bg-surface border border-border text-sm text-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none appearance-none">
+                    <option>Loan Type: All</option>
+                    <option>Conventional</option>
+                    <option>FHA</option>
+                    <option>VA</option>
+                </select>
+                <select class="bg-surface border border-border text-sm text-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none appearance-none">
+                    <option>LLM Model: v2.4-turbo</option>
+                    <option>v2.3-stable</option>
+                    <option>v3.0-beta</option>
+                </select>
+            </div>
+        </header>
 
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="research">Data Research Dashboard</button>
-    <button class="tab-btn" data-tab="ai-processing">AI Assisted Processing</button>
-  </div>
+        <!-- BANNER COMPONENT -->
+        <div class="alert-banner p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg shadow-red-900/20">
+            <div class="flex items-start gap-4">
+                <div class="bg-red-500/20 p-2 rounded-full mt-1">
+                    <svg class="w-6 h-6 text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-red-400">SYSTEM BOTTLENECK DETECTED</h3>
+                    <p class="text-gray-300 mt-1">Income & Asset Verification averaging <span class="font-bold text-white">11 days</span> (175% over SLA).</p>
+                    <p class="text-sm text-gray-400 mt-1"><span class="font-semibold text-gray-300">Root Cause:</span> 82% failure rate on automated extraction of self-employed tax returns.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                <button class="btn-outline px-4 py-2 text-sm font-medium rounded-lg">Export Failed Documents for LLM Evals</button>
+                <button class="btn-primary px-4 py-2 text-sm font-medium rounded-lg">View Ops Tickets</button>
+            </div>
+        </div>
 
-  <div id="tab-research" class="tab-panel active">
-    <h2>Data Research Dashboard</h2>
-    <p>Content coming soon.</p>
-  </div>
+        <!-- SECTION 1: TOP-LEVEL METRICS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1 -->
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-400">Avg Time to Close</h4>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-3xl font-bold metric-value">32 Days</span>
+                </div>
+                <div class="mt-2 text-xs flex items-center text-emerald-400">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                    2 days MoM
+                </div>
+            </div>
 
-  <div id="tab-ai-processing" class="tab-panel">
-    <h2>AI Assisted Processing</h2>
-    <p>Content coming soon.</p>
-  </div>
+            <!-- Card 2 -->
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-400">Fully Automated Origination Rate</h4>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-3xl font-bold metric-value">14%</span>
+                </div>
+                <div class="mt-2 text-xs flex items-center text-emerald-400">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    1.5% MoM
+                </div>
+            </div>
 
-  <script>
-    const buttons = document.querySelectorAll('.tab-btn');
-    const panels = document.querySelectorAll('.tab-panel');
+            <!-- Card 3 -->
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-400">Avg Cost per Loan Originated</h4>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-3xl font-bold metric-value">$8,450</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                    Goal: <span class="text-gray-400"><$5,000</span>
+                </div>
+            </div>
 
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        panels.forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      });
-    });
-  </script>
+            <!-- Card 4 -->
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-400">System-Wide LLM Hallucination/Error Rate</h4>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-3xl font-bold metric-value">1.2%</span>
+                </div>
+                <div class="mt-2 text-xs flex items-center text-red-400">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                    0.2% MoM
+                </div>
+            </div>
+        </div>
 
+        <!-- SECTION 2: PIPELINE VELOCITY CHART & SECTION 3: DATA TABLE (Two Columns on large screens) -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            
+            <!-- SECTION 2: CHART -->
+            <div class="glass-panel p-6 xl:col-span-2 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Pipeline Velocity</h2>
+                        <p class="text-sm text-gray-400">Actual completion time vs SLA target by stage</p>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs font-medium">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-sm bg-gray-600 opacity-50"></span>
+                            <span class="text-gray-400">Target SLA</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-sm bg-primary"></span>
+                            <span class="text-gray-300">Actual Time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 relative min-h-[300px]">
+                    <canvas id="pipelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- SECTION 3: HITL TRACKER / MANUAL INTERVENTION LOG -->
+            <div class="glass-panel p-6 xl:col-span-1 flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Manual Intervention Log</h2>
+                        <p class="text-sm text-gray-400">"Human-in-the-Loop" fallback tracking</p>
+                    </div>
+                </div>
+                
+                <div class="overflow-auto flex-1 -mx-2 px-2">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-xs font-medium text-gray-500 border-b border-border">
+                                <th class="pb-3 px-2">Loan ID</th>
+                                <th class="pb-3 px-2">Stage</th>
+                                <th class="pb-3 px-2">Bottleneck Reason</th>
+                                <th class="pb-3 px-2">Conf. Score</th>
+                                <th class="pb-3 px-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-border/50 table-row">
+                                <td class="py-3 px-2 font-mono text-xs text-primary">#LC-992</td>
+                                <td class="py-3 px-2 text-gray-300">Income Verif.</td>
+                                <td class="py-3 px-2">
+                                    <div class="text-gray-200">Failed Extraction</div>
+                                    <div class="text-xs text-gray-500">1040 Sched C</div>
+                                </td>
+                                <td class="py-3 px-2">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">42%</span>
+                                    <div class="text-[10px] text-gray-500 mt-1">8 Days</div>
+                                </td>
+                                <td class="py-3 px-2 text-right">
+                                    <button class="text-primary hover:text-white transition-colors text-xs font-medium bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded">View</button>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-border/50 table-row">
+                                <td class="py-3 px-2 font-mono text-xs text-primary">#LC-993</td>
+                                <td class="py-3 px-2 text-gray-300">Cond. Clearing</td>
+                                <td class="py-3 px-2">
+                                    <div class="text-gray-200">Complex Narrative</div>
+                                    <div class="text-xs text-gray-500">Letter of Expl.</div>
+                                </td>
+                                <td class="py-3 px-2">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">15%</span>
+                                    <div class="text-[10px] text-gray-500 mt-1">6 Days</div>
+                                </td>
+                                <td class="py-3 px-2 text-right">
+                                    <button class="text-primary hover:text-white transition-colors text-xs font-medium bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded">View</button>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-border/50 table-row">
+                                <td class="py-3 px-2 font-mono text-xs text-primary">#LC-994</td>
+                                <td class="py-3 px-2 text-gray-300">Underwriting</td>
+                                <td class="py-3 px-2">
+                                    <div class="text-gray-200">DTI Mismatch</div>
+                                    <div class="text-xs text-gray-500">Paystub (Bonus)</div>
+                                </td>
+                                <td class="py-3 px-2">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">88%</span>
+                                    <div class="text-[10px] text-gray-500 mt-1">4 Days</div>
+                                </td>
+                                <td class="py-3 px-2 text-right">
+                                    <button class="text-primary hover:text-white transition-colors text-xs font-medium bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded">View</button>
+                                </td>
+                            </tr>
+                            <tr class="table-row">
+                                <td class="py-3 px-2 font-mono text-xs text-primary">#LC-995</td>
+                                <td class="py-3 px-2 text-gray-300">Income Verif.</td>
+                                <td class="py-3 px-2">
+                                    <div class="text-gray-200">Unsupported Fmt</div>
+                                    <div class="text-xs text-gray-500">Bank Stmt (Local)</div>
+                                </td>
+                                <td class="py-3 px-2">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">30%</span>
+                                    <div class="text-[10px] text-gray-500 mt-1">9 Days</div>
+                                </td>
+                                <td class="py-3 px-2 text-right">
+                                    <button class="text-primary hover:text-white transition-colors text-xs font-medium bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded">View</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Chart.js Configuration
+        const ctx = document.getElementById('pipelineChart').getContext('2d');
+        
+        // Data for pipeline velocity
+        const labels = ['Intake', 'Disclosures', 'Verification', 'Underwriting', 'Title', 'Close'];
+        const slaData = [1, 2, 4, 3, 5, 2]; // Target SLA days
+        const actualData = [1.2, 1.8, 11, 4.5, 5.2, 2.1]; // Actual days
+        
+        // Define colors
+        const colorSLA = 'rgba(75, 85, 99, 0.4)'; // Gray
+        const colorActual = '#3b82f6'; // Blue
+        const colorWarning = '#ef4444'; // Red for bottlenecks
+
+        // Map colors based on condition
+        const actualBackgroundColors = actualData.map((val, idx) => {
+            if (val > slaData[idx] * 1.5) return colorWarning; // Pulse red if vastly exceeding
+            return colorActual;
+        });
+        
+        const actualBorderColors = actualData.map((val, idx) => {
+            if (val > slaData[idx] * 1.5) return '#fca5a5'; 
+            return '#60a5fa';
+        });
+
+        // Add a pulsing effect animation via a plugin if desired, or just rely on the static vibrant color
+        // Chart.js initialization
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Actual Time (Days)',
+                        data: actualData,
+                        backgroundColor: actualBackgroundColors,
+                        borderColor: actualBorderColors,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.8,
+                        order: 1
+                    },
+                    {
+                        label: 'Target SLA (Days)',
+                        data: slaData,
+                        backgroundColor: colorSLA,
+                        borderColor: 'rgba(107, 114, 128, 0.5)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        barPercentage: 1.0,
+                        categoryPercentage: 0.8,
+                        order: 2,
+                        type: 'bar'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: {
+                                family: 'Inter',
+                                size: 11
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Days to Complete',
+                            color: '#6b7280',
+                            font: {
+                                family: 'Inter',
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: {
+                                family: 'Inter',
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // We built a custom HTML legend
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(18, 18, 26, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.parsed.y} days`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    </script>
 </body>
 </html>
